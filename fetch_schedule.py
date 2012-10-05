@@ -31,8 +31,8 @@ def fetch_latest_schedule(host, port, username, password):
                 '(NOT SUBJECT "Re:")',
                 '(NOT SUBJECT "Fwd:")',
                 '(SENTSINCE "%s")' % last_monday()]
-    num = self.M.search(None, *criteria)[1][0].split()[0]
-    raw_email = self.M.fetch(num, '(RFC822)')[1][0][1]
+    num = M.search(None, *criteria)[1][0].split()[0]
+    raw_email = M.fetch(num, '(RFC822)')[1][0][1]
     message = email.message_from_string(raw_email)
     raw_attachment = message.get_payload(1).get_payload()
     return base64.b64decode(raw_attachment)

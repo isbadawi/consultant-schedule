@@ -1,6 +1,6 @@
 from apiclient.discovery import build
 from oauth2client.file import Storage
-from oauth2client.client import OAuth2WebServerFlow
+from oauth2client.client import OAuth2WebServerFlow, AccessTokenRefreshError
 from oauth2client.tools import run
 import httplib2
 import rfc3339
@@ -36,5 +36,9 @@ class CalendarApi(object):
                 'dateTime': rfc3339.rfc3339(end),
             },
         }
-        events = self.service.events()
-        return events.insert(calendarId='primary', body=event).execute()
+        try:
+            events = self.service.events()
+            return events.insert(calendarId='primary', body=event).execute()
+        except AccessTokenRefreshError:
+            print 'Your Google credentials have expired (or been revoked).'
+            print 'Re-run the script to reauthorize.'
