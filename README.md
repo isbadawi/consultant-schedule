@@ -2,13 +2,22 @@ This script inspects your McGill inbox for emails from Faiyaz with the
 latest lab consultant schedule, and creates corresponding events in your
 Google Calendar.
 
-To run this, you need
+To run this, install the requirements
 
-- Your McGill email and password
-    You can pass these in to the command line, or set the
-    MCGILL_SID and MCGILL_PIN environment variables
+    sudo pip install -r requirements.txt
+    
+and run `fetch_schedule.py` with appropriate arguments.
 
-- Authorize this app to manipulate your Google calendar
-    The first time this runs, a web browser will open and you'll be
-    asked to authorize this app to touch your calendar. (It just creates
-    events; nothing sneaky.)
+    usage: fetch_schedule.py [-h] [--host host] [--port port] --username user
+                             --password pass --name name
+
+    manage SOCS consultant schedule
+
+    optional arguments:
+      -h, --help       show this help message and exit
+      --host host      IMAP host to fetch from (default: exchange.mcgill.ca)
+      --port port      IMAP port (default: 993)
+      --username user  IMAP username (default: None)
+      --password pass  IMAP password (default: None)
+      --name name      Your first name (as it appears on the consultant schedule))
+                       (default: None)
