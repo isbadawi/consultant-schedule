@@ -94,7 +94,7 @@ def parse_args():
         help='IMAP password')
     parser.add_argument('--name',
         required=True, metavar='name',
-        help='Your first name (as it appears on the consultant schedule))')
+        help='Your first name (as it appears on the consultant schedule)')
     return parser.parse_args()
 
 if __name__ == '__main__':

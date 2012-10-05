@@ -19,5 +19,5 @@ and run `fetch_schedule.py` with appropriate arguments.
       --port port      IMAP port (default: 993)
       --username user  IMAP username (default: None)
       --password pass  IMAP password (default: None)
-      --name name      Your first name (as it appears on the consultant schedule))
+      --name name      Your first name (as it appears on the consultant schedule)
                        (default: None)
