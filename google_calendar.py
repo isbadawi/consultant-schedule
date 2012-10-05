@@ -33,7 +33,7 @@ class CalendarApi(object):
             },
             'end': {
                 'timeZone': 'America/Montreal',
-            'dateTime': rfc3339.rfc3339(end),
+                'dateTime': rfc3339.rfc3339(end),
             },
         }
         events = self.service.events()
