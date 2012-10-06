@@ -63,7 +63,7 @@ def build_schedule(s):
             shift = time(hour=int(shift.split('-')[0]))
             s = datetime.combine(week_date + timedelta(days=i), shift)
             schedule_by_name[name].append((s, s + timedelta(hours=2)))
-    for name, schedule in schedule_by_name.items():
+    for schedule in schedule_by_name.values():
         # This loop merges together consecutive shifts
         i = 1
         while i < len(schedule):
