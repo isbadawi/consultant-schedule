@@ -92,9 +92,6 @@ def parse_args():
     parser.add_argument('--password',
         required=True, metavar='pass',
         help='IMAP password')
-    parser.add_argument('--name',
-        required=True, metavar='name',
-        help='Your first name (as it appears on the consultant schedule)')
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -103,5 +100,7 @@ if __name__ == '__main__':
                                          args.username, args.password)
     schedule = build_schedule(raw_schedule)
     calendar = CalendarApi.authorize()
-    for shift in schedule[args.name]:
-        calendar.create_event(shift[0], shift[1])
+    colors = calendar.get_available_colors()
+    for ((name, shifts), color) in zip(schedule.items(), colors):
+        for shift in shifts:
+            calendar.create_event(name, color, shift[0], shift[1])

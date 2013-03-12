@@ -23,9 +23,14 @@ class CalendarApi(object):
         http = credentials.authorize(httplib2.Http())
         return cls(build('calendar', 'v3', http=http))
 
-    def create_event(self, start, end):
+    def get_available_colors(self):
+        response = self.service.colors().get().execute()
+        return response['event'].keys()
+
+    def create_event(self, name, color, start, end):
         event = {
-            'summary': 'Consultant shift',
+            'summary': name,
+            'colorId': color,
             'location': 'Trottier 3rd',
             'start': {
                 'timeZone': 'America/Montreal',
@@ -38,7 +43,8 @@ class CalendarApi(object):
         }
         try:
             events = self.service.events()
-            return events.insert(calendarId='primary', body=event).execute()
+            calendarId = '22f209nv6do0e2c5e4v0l9tl04@group.calendar.google.com'
+            return events.insert(calendarId=calendarId, body=event).execute()
         except AccessTokenRefreshError:
             print 'Your Google credentials have expired (or been revoked).'
             print 'Re-run the script to reauthorize.'
