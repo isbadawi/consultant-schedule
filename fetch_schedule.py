@@ -37,16 +37,12 @@ def fetch_latest_schedule(host, port, username, password):
     raw_attachment = message.get_payload(1).get_payload()
     return base64.b64decode(raw_attachment)
 
-def build_schedule(s):
-    def _clean(s):
-        return s.strip(' \r\t')
-    s = s.replace('\r\t', '\n')
-    lines = [_clean(l) for l in s.split('\n') if _clean(l)]
+def index_by_day(lines):
+    """
+    Maps days (Monday is 0) to lists of lines like '<start>-<end> <name>'.
+    """
     days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
-            'Saturday', 'Sunday']
-    week_date = get_monday_date(lines[0])
-    # schedule_by_day maps days (Monday is 0) to lists of lines like
-    # '<start>-<end> <name>'
+        'Saturday', 'Sunday']
     schedule_by_day = []
     for i, day in enumerate(days):
         index = lines.index(day)
@@ -54,53 +50,86 @@ def build_schedule(s):
         if i < len(days) - 1:
             next_index = lines.index(days[i + 1])
         schedule_by_day.append(lines[index + 1:next_index])
-    # schedule_by_name maps consultant names to lists of
-    # (start, end) tuples, where start and end are datetimes
-    schedule_by_name = collections.defaultdict(list)
-    for i, shifts in enumerate(schedule_by_day):
-        for shift in shifts:
-            shift, name = shift.split()
-            shift = time(hour=int(shift.split('-')[0]))
-            s = datetime.combine(week_date + timedelta(days=i), shift)
-            schedule_by_name[name].append((s, s + timedelta(hours=2)))
+    return schedule_by_day
+
+def merge_consecutive_shifts(schedule_by_name):
     for schedule in schedule_by_name.values():
-        # This loop merges together consecutive shifts
         i = 1
         while i < len(schedule):
-            if schedule[i - 1][1].hour == schedule[i][0].hour:
-                combined = (schedule[i - 1][0], schedule[i][1])
-                schedule.insert(i - 1, combined)
+            previous_start, previous_end = schedule[i - 1]
+            current_start, current_end = schedule[i]
+            same_day = previous_start.day == current_start.day
+            consecutive = previous_end.hour == current_start.hour
+            if same_day and consecutive:
+                schedule.insert(i - 1, (previous_start, current_end))
                 del schedule[i]
                 del schedule[i]
             else:
                 i += 1
+
+def shift_to_datetime_pair(week_day, shift):
+    start_time = time(hour=int(shift.split('-')[0]))
+    start_datetime = datetime.combine(week_day, start_time)
+    shift = (start_datetime, start_datetime + timedelta(hours=2))
+    return shift
+
+def index_by_name(week_start, schedule_by_day):
+    """
+    Maps consultant names to lists of (start, end) tuples,
+    where start and end are datetime objects.
+    """
+    schedule_by_name = collections.defaultdict(list)
+    for i, shifts in enumerate(schedule_by_day):
+        week_day = week_start + timedelta(days=i)
+        for shift in shifts:
+            shift, name = shift.split()
+            shift = shift_to_datetime_pair(week_day, shift)
+            schedule_by_name[name].append(shift)
+    merge_consecutive_shifts(schedule_by_name)
     return schedule_by_name
 
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description='manage SOCS consultant schedule',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--host',
-        default='exchange.mcgill.ca', metavar='host',
-        help='IMAP host to fetch from')
-    parser.add_argument('--port',
-        default=993, type=int, metavar='port',
-        help='IMAP port')
-    parser.add_argument('--username',
-        required=True, metavar='user',
-        help='IMAP username')
-    parser.add_argument('--password',
-        required=True, metavar='pass',
-        help='IMAP password')
-    return parser.parse_args()
+def get_lines(s):
+    lines = []
+    for l in s.replace('\r\t', '\n').split('\n'):
+        line = l.strip(' \r\t')
+        if line:
+            lines.append(line)
+    return lines
 
-if __name__ == '__main__':
-    args = parse_args()
-    raw_schedule = fetch_latest_schedule(args.host, args.port,
-                                         args.username, args.password)
-    schedule = build_schedule(raw_schedule)
+def build_schedule(raw_schedule):
+    lines = get_lines(raw_schedule)
+    week_date = get_monday_date(lines[0])
+    schedule_by_day = index_by_day(lines)
+    schedule_by_name = index_by_name(week_date, schedule_by_day)
+    return schedule_by_name
+
+def populate_calendar(schedule):
     calendar = CalendarApi.authorize()
     colors = calendar.get_available_colors()
     for ((name, shifts), color) in zip(schedule.items(), colors):
         for shift in shifts:
             calendar.create_event(name, color, shift[0], shift[1])
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description='manage SOCS consultant schedule',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--host', default='exchange.mcgill.ca', metavar='host',
+        help='IMAP host to fetch from')
+    parser.add_argument('--port', default=993, type=int, metavar='port',
+        help='IMAP port')
+    parser.add_argument('--username', required=True, metavar='user',
+        help='IMAP username')
+    parser.add_argument('--password', required=True, metavar='pass',
+        help='IMAP password')
+    return parser.parse_args()
+
+def main():
+    args = parse_args()
+    raw_schedule = fetch_latest_schedule(args.host, args.port,
+        args.username, args.password)
+    schedule = build_schedule(raw_schedule)
+    populate_calendar(schedule)
+
+if __name__ == '__main__':
+    main()
